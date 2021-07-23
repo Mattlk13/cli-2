@@ -1,6 +1,8 @@
 ---
 description: "Configure containers at runtime"
 keywords: "docker, run, configure, runtime"
+redirect_from:
+- /reference/run/
 ---
 
 <!-- This file is maintained within the docker/cli GitHub
@@ -585,7 +587,7 @@ $ docker inspect -f "{{ .State.StartedAt }}" my-container
 
 Combining `--restart` (restart policy) with the `--rm` (clean up) flag results
 in an error. On container restart, attached clients are disconnected. See the
-examples on using the [`--rm` (clean up)](#clean-up-rm) flag later in this page.
+examples on using the [`--rm` (clean up)](#clean-up---rm) flag later in this page.
 
 ### Examples
 
@@ -1738,7 +1740,7 @@ volume mounted on the host).
 
 The `container-dest` must always be an absolute path such as `/src/docs`.
 The `host-src` can either be an absolute path or a `name` value. If you
-supply an absolute path for the `host-dir`, Docker bind-mounts to the path
+supply an absolute path for the `host-src`, Docker bind-mounts to the path
 you specify. If you supply a `name`, Docker creates a named volume by that `name`.
 
 A `name` value must start with an alphanumeric character,

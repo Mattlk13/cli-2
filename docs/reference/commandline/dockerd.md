@@ -104,6 +104,7 @@ Options:
       --userland-proxy                        Use userland proxy for loopback traffic (default true)
       --userland-proxy-path string            Path to the userland proxy binary
       --userns-remap string                   User/Group setting for user namespaces
+      --validate                              Validate daemon configuration and exit
   -v, --version                               Print version information and quit
 ```
 
@@ -1203,8 +1204,8 @@ command line or Docker's Engine API are allowed or denied by the plugin.
 If you have multiple plugins installed, each plugin, in order, must
 allow the request for it to complete.
 
-For information about how to create an authorization plugin, see [authorization
-plugin](../../extend/plugins_authorization.md) section in the Docker extend section of this documentation.
+For information about how to create an authorization plugin, refer to the
+[authorization plugin](../../extend/plugins_authorization.md) section.
 
 
 ### Daemon user namespace options
@@ -1232,10 +1233,16 @@ Docker supports softlinks for the Docker data directory (`/var/lib/docker`) and
 for `/var/lib/docker/tmp`. The `DOCKER_TMPDIR` and the data directory can be
 set like this:
 
-    DOCKER_TMPDIR=/mnt/disk2/tmp /usr/local/bin/dockerd -D -g /var/lib/docker -H unix:// > /var/lib/docker-machine/docker.log 2>&1
-    # or
-    export DOCKER_TMPDIR=/mnt/disk2/tmp
-    /usr/local/bin/dockerd -D -g /var/lib/docker -H unix:// > /var/lib/docker-machine/docker.log 2>&1
+```console
+$ DOCKER_TMPDIR=/mnt/disk2/tmp /usr/local/bin/dockerd -D -g /var/lib/docker -H unix:// > /var/lib/docker-machine/docker.log 2>&1
+```
+
+or
+
+```console
+$ export DOCKER_TMPDIR=/mnt/disk2/tmp
+$ /usr/local/bin/dockerd -D -g /var/lib/docker -H unix:// > /var/lib/docker-machine/docker.log 2>&1
+````
 
 #### Default cgroup parent
 
@@ -1328,6 +1335,25 @@ For example, the daemon fails to start if you set daemon labels
 in the configuration file and also set daemon labels via the `--label` flag.
 Options that are not present in the file are ignored when the daemon starts.
 
+The `--validate` option allows to validate a configuration file without
+starting the Docker daemon. A non-zero exit code is returned for invalid
+configuration files.
+
+```console
+$ dockerd --validate --config-file=/tmp/valid-config.json
+configuration OK
+
+$ echo $?
+0
+
+$ dockerd --validate --config-file /tmp/invalid-config.json
+unable to configure the Docker daemon with file /tmp/invalid-config.json: the following directives don't match any configuration option: unknown-option
+
+$ echo $?
+1
+```
+
+
 ##### On Linux
 
 The default location of the configuration file on Linux is
@@ -1400,6 +1426,10 @@ This is a full example of the allowed configuration options on Linux:
   "log-driver": "json-file",
   "log-level": "",
   "log-opts": {
+    "cache-disabled": "false",
+    "cache-max-file": "5",
+    "cache-max-size": "20m",
+    "cache-compress": "true",
     "env": "os,customer",
     "labels": "somelabel",
     "max-file": "5",
@@ -1560,7 +1590,9 @@ previously configured cluster configurations.
 
 ### Run multiple daemons
 
-> **Note:** Running multiple daemons on a single host is considered as "experimental". The user should be aware of
+> **Note:**
+>
+> Running multiple daemons on a single host is considered as "experimental". The user should be aware of
 > unsolved problems. This solution may not work properly in some cases. Solutions are currently under development
 > and will be delivered in the near future.
 
@@ -1612,7 +1644,7 @@ The `--tls*` options enable use of specific certificates for individual daemons.
 
 Example script for a separate “bootstrap” instance of the Docker daemon without network:
 
-```bash
+```console
 $ sudo dockerd \
         -H unix:///var/run/docker-bootstrap.sock \
         -p /var/run/docker-bootstrap.pid \

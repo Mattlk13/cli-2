@@ -46,6 +46,8 @@ func newExportCommand(dockerCli command.Cli) *cobra.Command {
 
 	flags := cmd.Flags()
 	flags.BoolVar(&opts.Kubeconfig, "kubeconfig", false, "Export as a kubeconfig file")
+	flags.SetAnnotation("kubeconfig", "kubernetes", nil)
+	flags.SetAnnotation("kubeconfig", "deprecated", nil)
 	return cmd
 }
 
@@ -77,7 +79,7 @@ func writeTo(dockerCli command.Cli, reader io.Reader, dest string) error {
 
 // RunExport exports a Docker context
 func RunExport(dockerCli command.Cli, opts *ExportOptions) error {
-	if err := validateContextName(opts.ContextName); err != nil && opts.ContextName != command.DefaultContextName {
+	if err := store.ValidateContextName(opts.ContextName); err != nil && opts.ContextName != command.DefaultContextName {
 		return err
 	}
 	ctxMeta, err := dockerCli.ContextStore().GetMetadata(opts.ContextName)

@@ -437,9 +437,15 @@ A Dockerfile is similar to a Makefile.
   * `ftp_proxy`
   * `NO_PROXY`
   * `no_proxy`
+  * `ALL_PROXY`
+  * `all_proxy`
 
-  To use these, simply pass them on the command line using the `--build-arg
-  <varname>=<value>` flag.
+  To use these, pass them on the command line using `--build-arg` flag, for
+  example:
+
+  ```
+  $ docker build --build-arg HTTPS_PROXY=https://my-proxy.example.com .
+  ```
 
 **ONBUILD**
   -- `ONBUILD [INSTRUCTION]`

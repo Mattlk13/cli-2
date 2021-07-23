@@ -935,7 +935,7 @@ __docker_complete_log_options() {
 	# awslogs does not implement the $common_options2.
 	local awslogs_options="$common_options1 awslogs-create-group awslogs-credentials-endpoint awslogs-datetime-format awslogs-group awslogs-multiline-pattern awslogs-region awslogs-stream tag"
 
-	local fluentd_options="$common_options1 $common_options2 fluentd-address fluentd-async-connect fluentd-buffer-limit fluentd-retry-wait fluentd-max-retries fluentd-sub-second-precision tag"
+	local fluentd_options="$common_options1 $common_options2 fluentd-address fluentd-async fluentd-buffer-limit fluentd-request-ack fluentd-retry-wait fluentd-max-retries fluentd-sub-second-precision tag"
 	local gcplogs_options="$common_options1 $common_options2 gcp-log-cmd gcp-meta-id gcp-meta-name gcp-meta-zone gcp-project"
 	local gelf_options="$common_options1 $common_options2 gelf-address gelf-compression-level gelf-compression-type gelf-tcp-max-reconnect gelf-tcp-reconnect-delay tag"
 	local journald_options="$common_options1 $common_options2 tag"
@@ -1955,6 +1955,7 @@ _docker_container_run_and_create() {
 		--pid
 		--pids-limit
 		--publish -p
+		--pull
 		--restart
 		--runtime
 		--security-opt
@@ -2153,6 +2154,10 @@ _docker_container_run_and_create() {
 			esac
 			return
 			;;
+		--pull)
+		  COMPREPLY=( $( compgen -W 'always missing never' -- "$cur" ) )
+		  return
+		  ;;
 		--runtime)
 			__docker_complete_runtimes
 			return
@@ -2548,12 +2553,14 @@ _docker_daemon() {
 		--ip-forward=false
 		--ip-masq=false
 		--iptables=false
+		--ip6tables
 		--ipv6
 		--live-restore
 		--no-new-privileges
 		--raw-logs
 		--selinux-enabled
 		--userland-proxy=false
+		--validate
 		--version -v
 	"
 	local options_with_args="
@@ -4349,6 +4356,9 @@ _docker_node_ls() {
 			__docker_complete_nodes --cur "${cur##*=}" --id
 			return
 			;;
+		label|node.label)
+			return
+			;;
 		membership)
 			COMPREPLY=( $( compgen -W "accepted pending" -- "${cur##*=}" ) )
 			return
@@ -4365,7 +4375,7 @@ _docker_node_ls() {
 
 	case "$prev" in
 		--filter|-f)
-			COMPREPLY=( $( compgen -W "id label membership name role" -S = -- "$cur" ) )
+			COMPREPLY=( $( compgen -W "id label membership name node.label role" -S = -- "$cur" ) )
 			__docker_nospace
 			return
 			;;
@@ -5476,6 +5486,23 @@ _docker_wait() {
 	_docker_container_wait
 }
 
+COMPOSE_PLUGIN_PATH=$(docker info --format '{{json .ClientInfo.Plugins}}' | sed -n 's/.*"Path":"\([^"]\+docker-compose\)".*/\1/p')
+
+_docker_compose() {
+	local completionCommand="__completeNoDesc"
+	local resultArray=($COMPOSE_PLUGIN_PATH $completionCommand compose)
+	for value in "${words[@]:2}"; do
+		if [ -z "$value" ]; then
+			resultArray+=( "''" )
+		else
+			resultArray+=( "$value" )
+		fi
+	done
+	local result=$(eval "${resultArray[*]}" 2> /dev/null | grep -v '^:[0-9]*$')
+
+	COMPREPLY=( $(compgen -W "${result}" -- "$current") )
+}
+
 _docker() {
 	local previous_extglob_setting=$(shopt -p extglob)
 	shopt -s extglob
@@ -5545,11 +5572,17 @@ _docker() {
 		wait
 	)
 
+	local known_plugin_commands=()
+
+	if [ -f "$COMPOSE_PLUGIN_PATH" ] ; then
+		known_plugin_commands+=("compose")
+	fi
+
 	local experimental_server_commands=(
 		checkpoint
 	)
 
-	local commands=(${management_commands[*]} ${top_level_commands[*]})
+	local commands=(${management_commands[*]} ${top_level_commands[*]} ${known_plugin_commands[*]})
 	[ -z "$DOCKER_HIDE_LEGACY_COMMANDS" ] && commands+=(${legacy_commands[*]})
 
 	# These options are valid as global options for all client commands

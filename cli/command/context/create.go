@@ -62,8 +62,11 @@ func newCreateCommand(dockerCli command.Cli) *cobra.Command {
 		&opts.DefaultStackOrchestrator,
 		"default-stack-orchestrator", "",
 		"Default orchestrator for stack operations to use with this context (swarm|kubernetes|all)")
+	flags.SetAnnotation("default-stack-orchestrator", "deprecated", nil)
 	flags.StringToStringVar(&opts.Docker, "docker", nil, "set the docker endpoint")
 	flags.StringToStringVar(&opts.Kubernetes, "kubernetes", nil, "set the kubernetes endpoint")
+	flags.SetAnnotation("kubernetes", "kubernetes", nil)
+	flags.SetAnnotation("kubernetes", "deprecated", nil)
 	flags.StringVar(&opts.From, "from", "", "create context from a named context")
 	return cmd
 }
@@ -137,7 +140,7 @@ func createNewContext(o *CreateOptions, stackOrchestrator command.Orchestrator, 
 }
 
 func checkContextNameForCreation(s store.Reader, name string) error {
-	if err := validateContextName(name); err != nil {
+	if err := store.ValidateContextName(name); err != nil {
 		return err
 	}
 	if _, err := s.GetMetadata(name); !store.IsErrContextDoesNotExist(err) {

@@ -131,7 +131,8 @@ func runContainer(dockerCli command.Cli, opts *runOptions, copts *containerOptio
 		return runStartContainerErr(err)
 	}
 	if opts.sigProxy {
-		sigc := ForwardAllSignals(ctx, dockerCli, createResponse.ID)
+		sigc := notfiyAllSignals()
+		go ForwardAllSignals(ctx, dockerCli, createResponse.ID, sigc)
 		defer signal.StopCatch(sigc)
 	}
 
@@ -213,32 +214,7 @@ func runContainer(dockerCli command.Cli, opts *runOptions, copts *containerOptio
 	return nil
 }
 
-func attachContainer(
-	ctx context.Context,
-	dockerCli command.Cli,
-	errCh *chan error,
-	config *container.Config,
-	containerID string,
-) (func(), error) {
-	stdout, stderr := dockerCli.Out(), dockerCli.Err()
-	var (
-		out, cerr io.Writer
-		in        io.ReadCloser
-	)
-	if config.AttachStdin {
-		in = dockerCli.In()
-	}
-	if config.AttachStdout {
-		out = stdout
-	}
-	if config.AttachStderr {
-		if config.Tty {
-			cerr = stdout
-		} else {
-			cerr = stderr
-		}
-	}
-
+func attachContainer(ctx context.Context, dockerCli command.Cli, errCh *chan error, config *container.Config, containerID string) (func(), error) {
 	options := types.ContainerAttachOptions{
 		Stream:     true,
 		Stdin:      config.AttachStdin,
@@ -250,6 +226,24 @@ func attachContainer(
 	resp, errAttach := dockerCli.Client().ContainerAttach(ctx, containerID, options)
 	if errAttach != nil {
 		return nil, errAttach
+	}
+
+	var (
+		out, cerr io.Writer
+		in        io.ReadCloser
+	)
+	if config.AttachStdin {
+		in = dockerCli.In()
+	}
+	if config.AttachStdout {
+		out = dockerCli.Out()
+	}
+	if config.AttachStderr {
+		if config.Tty {
+			cerr = dockerCli.Out()
+		} else {
+			cerr = dockerCli.Err()
+		}
 	}
 
 	ch := make(chan error, 1)
@@ -283,7 +277,7 @@ func reportError(stderr io.Writer, name string, str string, withHelp bool) {
 	if withHelp {
 		str += "\nSee 'docker " + name + " --help'."
 	}
-	fmt.Fprintln(stderr, "docker:", str)
+	_, _ = fmt.Fprintln(stderr, "docker:", str)
 }
 
 // if container start fails with 'not found'/'no such' error, return 127
